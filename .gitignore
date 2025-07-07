@@ -1,0 +1,12 @@
+# Environment variables file
+.env
+
+# Every .CSV file
+*.csv
+
+# Python Virtual Environment folder
+venv/
+
+# Every Python file except for the development one
+*.py
+!main_3.py
