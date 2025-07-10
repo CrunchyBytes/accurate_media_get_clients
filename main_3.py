@@ -4,11 +4,17 @@ import os
 import datetime
 from dotenv import load_dotenv
 import shutil
+from time import sleep
 
 # === Load API Keys from .env ===
 load_dotenv()
 APOLLO_API_ORG_AND_PEOPLE_SEARCH_KEY = os.getenv("APOLLO_API_ORG_AND_PEOPLE_SEARCH_KEY")
 APOLLO_API_PEOPLE_ENRICHMENT_SEARCH_KEY = os.getenv("APOLLO_API_PEOPLE_ENRICHMENT_SEARCH_KEY")
+
+PIPEDREAM_API_KEY = os.getenv("PIPEDREAM_API_KEY")
+PIPEDREAM_SOURCE_ID = os.getenv("PIPEDREAM_SOURCE_ID")
+PIPEDREAM_WEBHOOK_URL = os.getenv("PIPEDREAM_WEBHOOK_URL")
+
 UPNIFY_API_KEY = os.getenv("UPNIFY_API_KEY", "")
 UPNIFY_API_TOKEN = os.getenv("UPNIFY_API_TOKEN", "")
 
@@ -25,11 +31,12 @@ PERSON_TITLES = ["sales", "marketing", "media", "communication", "advertising", 
 PERSON_SENIORITIES = ["owner", "founder", "c_suite", "partner", "vp", "head", "director", "manager", "senior", "entry", "intern"]
 
 # General parameters
-PAGE = 1 if TEST_MODE else 10
+PAGE = 2 if TEST_MODE else 10
 PER_PAGE = 3 if TEST_MODE else 20
 
 # Constants
 LOCKED_EMAIL = "email_not_unlocked@domain.com"
+WEBHOOK_RESPONSE_TIME = 65
 
 
 timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
@@ -49,7 +56,6 @@ if os.path.exists(master_csv):
     with open(master_csv, newline='', encoding='utf-8') as f:
         reader = csv.DictReader(f)
         existing_emails = set(row['Email'].lower() for row in reader)
-        breakpoint()
 
 # === Helper to make safe POST requests ===
 def safe_post(url, payload={}, json={}):
@@ -118,7 +124,7 @@ people = result.get("people", [])
 
 for person in people:
     email = person.get("email", "").lower()
-    breakpoint()
+    
     if email in existing_emails and email != LOCKED_EMAIL:
         continue
 
@@ -183,11 +189,17 @@ if contacts_found:
 
         # Construct the payload in Apollo's expected format
         payload = {
+            "reveal_personal_emails": "true",
+            "reveal_phone_number": "true",
+            "webhook_url": PIPEDREAM_WEBHOOK_URL
+        }
+
+        json = {
             "details": [{"id": pid} for pid in person_ids]
         }
 
         # Send bulk enrichment request
-        response = safe_post("https://api.apollo.io/api/v1/people/bulk_match", {}, payload)
+        response = safe_post("https://api.apollo.io/api/v1/people/bulk_match", payload, json)
         
         if response:
             # Extract email info from response
@@ -202,8 +214,90 @@ if contacts_found:
                 if pid in enriched_map and enriched_map[pid]:
                     contact["Email"] = enriched_map[pid]
 
-
 # === Step 3: Save CSV ===
+# Sleep while awaiting webhook response
+print(f"📞 Waiting {WEBHOOK_RESPONSE_TIME} seconds to retrieve phone numbers...")
+sleep(WEBHOOK_RESPONSE_TIME)
+
+# Define request headers
+headers = {
+    "Authorization": f"Bearer {PIPEDREAM_API_KEY}"
+}
+
+# Poll webhook events from Pipedream
+response = requests.get(
+    f"https://api.pipedream.com/v1/sources/{PIPEDREAM_SOURCE_ID}/events",
+    headers=headers
+)
+
+if response.status_code != 200:
+    print("❌ Failed to retrieve events.")
+    print(f"Status code: {response.status_code}")
+    exit()
+
+events = response.json().get("data", [])
+
+id_to_phone = {}
+for event in events:
+    try:
+        payload_body = event.get("e").get("body", {})
+        
+        if payload_body:
+            payload_body_status = payload_body.get("status")
+
+            if payload_body_status == "success":
+                people = payload_body.get("people")
+
+                for person in people:
+                    person_status = person.get("status")
+
+                    if person_status == "success":
+                        person_id = person.get("id")
+                        person_phone_numbers = person.get("phone_numbers", [])
+
+                        raw_number = ""
+                        for person_phone_number in person_phone_numbers:
+                            if raw_number:
+                                raw_number += ", " + person_phone_number.get("raw_number")
+                            else:
+                                raw_number = person_phone_number.get("raw_number")
+
+                        if person_id and raw_number:
+                            id_to_phone[person_id] = raw_number
+            else:
+                print(f"⚠️ Webhook's status was {payload_body_status}; not 'success'")
+        else:
+            print("⚠️ Webhook's body is empty")
+    except KeyError as e:
+        print(f"❌ Failed to retrieve webhook's events: {e}")
+
+if id_to_phone:
+    print(f"✅ Retrieved {len(id_to_phone)} phone numbers.")
+    for id_phone in id_to_phone:
+        print(f"{id_phone} : {id_to_phone[id_phone]}")
+else:
+    print(f"⚠️ Could not retrieve phone numbers")
+
+
+# Fill in contacts' "WhatsApp" field
+for contact in contacts_found:
+    pid = contact.get("Person ID")
+    
+    if pid in id_to_phone:
+        phone_number = id_to_phone[pid]
+
+        if "ext" in phone_number:
+            organization_phone = contact["Organization Phone"]
+
+            if organization_phone:
+                contact["Organization Phone"] += ", " + phone_number
+            else:
+                contact["Organization Phone"] = phone_number
+        else:
+            contact["WhatsApp"] = phone_number
+
+
+# === Step 4: Save CSV ===
 print(f"💾 Saving results to {csv_filename}...")
 if contacts_found:
     with open(csv_filename, "w", newline="", encoding='utf-8') as f:
