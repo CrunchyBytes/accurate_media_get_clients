@@ -306,7 +306,17 @@ if contacts_found:
         writer.writerows(contacts_found)
     
     try:
-        shutil.copyfile(csv_filename, master_csv)
+        file_exists = os.path.exists(master_csv)
+
+        with open(master_csv, "a", newline="", encoding="utf-8") as master_file:
+            writer = csv.DictWriter(master_file, fieldnames=contacts_found[0].keys())
+
+            if not file_exists:
+                writer.writeheader()  # solo si no existe
+
+            writer.writerows(contacts_found)
+
+        print(f"✅ Contacts appended to {master_csv}")
     except PermissionError as permission_error:
         print(f"⚠️ PermissionError when attempting to copy {csv_filename} to {master_csv}: {permission_error}.")
         print(f"⚠️ Please ensure that {master_csv} isn't open")
