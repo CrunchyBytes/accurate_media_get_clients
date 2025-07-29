@@ -292,8 +292,6 @@ for event in events:
 
 if id_to_phone:
     print(f"✅ Retrieved {len(id_to_phone)} phone numbers.")
-    for id_phone in id_to_phone:
-        print(f"{id_phone} : {id_to_phone[id_phone]}")
 else:
     print(f"⚠️ Could not retrieve phone numbers")
 
@@ -342,7 +340,8 @@ if contacts_found:
 else:
     print("⚠️ No new contacts to save.")
 
-# === Step 4: Optional Upload to Upnify CRM ===
+
+# === Step 6: Optional Upload to Upnify CRM ===
 if UPNIFY_API_KEY and UPNIFY_API_TOKEN and contacts_found:
     print("☁️ Uploading to Upnify CRM...")
     upnify_url = "https://api.upnify.com/v1/contacts"
