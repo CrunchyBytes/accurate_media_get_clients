@@ -31,12 +31,12 @@ PERSON_TITLES = ["sales", "marketing", "media", "communication", "advertising", 
 PERSON_SENIORITIES = ["owner", "founder", "c_suite", "partner", "vp", "head", "director", "manager", "senior", "entry", "intern"]
 
 # General parameters
-PAGE = 2 if TEST_MODE else 10
-PER_PAGE = 3 if TEST_MODE else 20
+ORGANIZATIONS_PER_PAGE = 5 if TEST_MODE else 100
+CONTACTS_PER_PAGE = 5 if TEST_MODE else 100
 
 # Constants
 LOCKED_EMAIL = "email_not_unlocked@domain.com"
-WEBHOOK_RESPONSE_TIME = 65
+WEBHOOK_RESPONSE_TIME = 180
 
 
 timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
@@ -74,8 +74,7 @@ print("🔎 Retrieving companies...")
 payload = {
     "organization_num_employees_ranges[]": EMPLOYEE_RANGES,
     "organization_locations[]": ORGANIZATION_LOCATIONS,
-    "page": PAGE,
-    "per_page": PER_PAGE
+    "per_page": ORGANIZATIONS_PER_PAGE
 }
 
 result = safe_post("https://api.apollo.io/api/v1/mixed_companies/search", payload)
@@ -87,8 +86,7 @@ if result:
 payload = {
     "organization_locations[]": ORGANIZATION_LOCATIONS,
     "revenue_range[min]": REVENUE_RANGE_MIN,
-    "page": PAGE,
-    "per_page": PER_PAGE
+    "per_page": ORGANIZATIONS_PER_PAGE
 }
 
 result = safe_post("https://api.apollo.io/api/v1/mixed_companies/search", payload)
@@ -115,8 +113,7 @@ payload = {
     "person_seniorities[]": PERSON_SENIORITIES,
     "organization_locations[]": ORGANIZATION_LOCATIONS,
     "organization_ids[]": organization_ids,
-    "page": PAGE,
-    "per_page": PER_PAGE
+    "per_page": CONTACTS_PER_PAGE
 }
 
 result = safe_post("https://api.apollo.io/api/v1/mixed_people/search", payload)
