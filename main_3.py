@@ -40,6 +40,8 @@ WEBHOOK_RESPONSE_TIME = 180
 
 
 timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
+print(f"⏰ Program started running at: {timestamp}!")
+
 csv_filename = f"apollo_contacts_{timestamp}.csv"
 master_csv = "apollo_contacts_master.csv"
 
