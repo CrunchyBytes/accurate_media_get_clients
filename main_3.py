@@ -80,7 +80,7 @@ payload = {
 result = safe_post("https://api.apollo.io/api/v1/mixed_companies/search", payload)
 
 if result:
-    companies = result.get("accounts", [])
+    companies = result.get("organizations", [])
 
 # === Step 1.5: Get Companies with Revenue filter === 
 payload = {
@@ -92,14 +92,18 @@ payload = {
 result = safe_post("https://api.apollo.io/api/v1/mixed_companies/search", payload)
 
 if result:
-    companies_revenue_filtered = result.get("accounts", [])
+    companies_revenue_filtered = result.get("organizations", [])
 
 companies += companies_revenue_filtered
+
+
 organization_ids = []
 
 for company in companies:
-    organization_id = company.get("organization_id", "")
-    organization_ids.append(organization_id)
+    organization_id = company.get("id", "")
+
+    if organization_id:
+        organization_ids.append(organization_id)
 
 print(f"✅ Retrieved {len(organization_ids)} companies.")
 
@@ -126,8 +130,12 @@ for person in people:
         continue
 
     id = person.get("id", "")
-    name = person.get("first_name", "") + " " + person.get("last_name", "")
-    location = person.get("city", "") + ", " + person.get("state", "") + ", " + person.get("country", "")
+    name = person.get("name", "")
+
+    try:
+        location = person.get("city", "") + ", " + person.get("state", "") + ", " + person.get("country", "")
+    except TypeError as error:
+        print(f"⚠️ {name} does not have city, state, or country. Error: {error}")
 
     try:
         organization =  person.get("organization").get("name", "")
@@ -136,7 +144,7 @@ for person in people:
         organization = ""
 
     try:
-        organization_phone = person.get("account").get("phone", "")
+        organization_phone = person.get("organization").get("phone", "")
     except AttributeError as error:
         if organization != "":
             print(f"⚠️ {organization} does not have a phone. Error: {error}")
