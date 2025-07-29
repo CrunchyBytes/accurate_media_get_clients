@@ -219,7 +219,16 @@ if contacts_found:
                 if pid in enriched_map and enriched_map[pid]:
                     contact["Email"] = enriched_map[pid]
 
-# === Step 3: Save CSV ===
+
+# === Step 3: Filter contacts with repeated e-mails
+# Remove contacts from contacts_found if their Email already exists in existing_emails
+contacts_found = [
+    contact for contact in contacts_found
+    if contact.get("Email", "").lower() not in existing_emails
+]
+
+
+# === Step 4: Retrieve personal phone numbers ===
 # Sleep while awaiting webhook response
 print(f"📞 Waiting {WEBHOOK_RESPONSE_TIME} seconds to retrieve phone numbers...")
 sleep(WEBHOOK_RESPONSE_TIME)
