@@ -72,6 +72,9 @@ def safe_post(url, payload={}, json={}):
 # === Step 1: Get Companies ===
 print("🔎 Retrieving companies...")
 
+companies = []
+companies_revenue_filtered = []
+
 # === Step 1.25: Get Companies with Number of Employees filter === 
 payload = {
     "organization_num_employees_ranges[]": EMPLOYEE_RANGES,
