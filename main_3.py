@@ -195,7 +195,10 @@ else:
 contacts_found = []
 
 for person in people:
-    email = person.get("email", "").lower()
+    email = person.get("email", "")
+
+    if email:
+        email = email.lower()
     
     if email in existing_emails and email != LOCKED_EMAIL:
         continue
