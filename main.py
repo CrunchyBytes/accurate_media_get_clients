@@ -97,6 +97,10 @@ def refresh_cached_organizations(org_page, increase_page):
     companies += companies_revenue_filtered
     print(f"✅ Retrieved {len(companies)} companies.")
 
+    # "organization_id" is the Organization's ID for accounts, whereas "id" is the Organization's ID for organizations
+    # "organization_id" does not exist within organizations, but "id" does exist for both organizations and accounts, but refer to different things
+    # That's why it's important to first read by "organization_id", in case the current company (o) is actually an account.
+    # If not, then (o) must be an organization, hence it's read by "id"
     new_orgs = [{"id": o.get("organization_id", o.get("id")), "name": o.get("name")} for o in companies]
     save_cached_organizations(new_orgs)
 
@@ -195,7 +199,7 @@ else:
 contacts_found = []
 
 for person in people:
-    email = person.get("email", "")
+    email = person.get("email")
 
     if email:
         email = email.lower()
@@ -203,7 +207,11 @@ for person in people:
     if email in existing_emails and email != LOCKED_EMAIL:
         continue
 
-    id = person.get("id", "")
+    # "person_id" is the Person's ID for contacts, whereas "id" is the Person's ID for people
+    # "person_id" does not exist within people, but "id" does exist for both people and contacts, but refer to different things
+    # That's why it's important to first read by "person_id", in case the current enriched person (person) is actually a contact.
+    # If not, then (person) must be an person, hence it's read by "id"
+    id = person.get("person_id", person.get("id"))
     name = person.get("name", "")
 
     try:
@@ -286,10 +294,9 @@ if contacts_found:
 
             # Map each person ID to their real email
             try:
-                enriched_map = {person.get("id"): person.get("email") for person in enriched_people}
-            except AttributeError as error:
-                breakpoint()
-                continue
+                enriched_map = {person.get("id"): person.get("email") for person in enriched_people if person["id"] and person["email"]}
+            except (TypeError, AttributeError) as error:
+                print(f'❌ An exception occurred when mapping enriched people\'s IDs to e-mails: {error}')
             
             # Update the corresponding contact's Email field with the enriched email
             for contact in chunk:
@@ -300,10 +307,13 @@ if contacts_found:
 
 # === Step 3: Filter contacts with repeated e-mails
 # Remove contacts from contacts_found if their Email already exists in existing_emails
-contacts_found = [
-    contact for contact in contacts_found
-    if contact.get("Email", "").lower() not in existing_emails
-]
+try:
+    contacts_found = [
+        contact for contact in contacts_found
+        if contact["Email"] and contact.get("Email").lower() not in existing_emails
+    ]
+except AttributeError as error:
+    print(f'❌ An exception occurred when filtering contacts with repeated e-mails: {error}')
 
 if not contacts_found:
     print("⚠️ No new contacts to save.")
