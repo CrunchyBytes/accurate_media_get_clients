@@ -10,3 +10,9 @@ venv/
 # Every Python file except for the development one
 *.py
 !main_3.py
+
+# Every JSON file created
+*.json
+
+# Pycache folder
+__pycache__/*
