@@ -16,9 +16,6 @@ PIPEDREAM_API_KEY = os.getenv("PIPEDREAM_API_KEY")
 PIPEDREAM_SOURCE_ID = os.getenv("PIPEDREAM_SOURCE_ID")
 PIPEDREAM_WEBHOOK_URL = os.getenv("PIPEDREAM_WEBHOOK_URL")
 
-UPNIFY_API_KEY = os.getenv("UPNIFY_API_KEY", "")
-UPNIFY_API_TOKEN = os.getenv("UPNIFY_API_TOKEN", "")
-
 # === Configuration ===
 TEST_MODE = False  # Set to False in production
 
