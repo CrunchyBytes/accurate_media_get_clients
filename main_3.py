@@ -3,8 +3,8 @@ import csv
 import os
 import datetime
 from dotenv import load_dotenv
-import shutil
 from time import sleep
+from json import load, dump
 
 # === Load API Keys from .env ===
 load_dotenv()
