@@ -46,6 +46,77 @@ ORG_SEARCH_URL = "https://api.apollo.io/api/v1/mixed_companies/search"
 PEOPLE_SEARCH_URL = "https://api.apollo.io/api/v1/mixed_people/search"
 
 
+# Functions
+def load_state():
+    if not os.path.exists(STATE_FILE):
+        return {"organization_page": 1, "people_page": 1}
+    with open(STATE_FILE, "r") as f:
+        return load(f)
+
+def save_state(state):
+    with open(STATE_FILE, "w") as f:
+        dump(state, f, indent=2)
+
+def load_cached_organizations():
+    if os.path.exists(ORG_CACHE_FILE):
+        with open(ORG_CACHE_FILE, "r") as f:
+            return load(f)
+    return []
+
+def save_cached_organizations(orgs):
+    with open(ORG_CACHE_FILE, "w") as f:
+        dump(orgs, f, indent=2)
+
+def refresh_cached_organizations(org_page, increase_page):
+    companies = companies_revenue_filtered = []
+
+    print("🔎 Retrieving companies...")
+
+    payload = {
+        "organization_num_employees_ranges[]": EMPLOYEE_RANGES,
+        "organization_locations[]": ORGANIZATION_LOCATIONS,
+        "page": org_page,
+        "per_page": ORGANIZATIONS_PER_PAGE
+    }
+
+    result = safe_post(ORG_SEARCH_URL, payload)
+    companies = result.get("organizations", []) + result.get("accounts", [])
+
+    # === Step 1.5: Get Companies with Revenue filter ===
+    payload = {
+        "organization_locations[]": ORGANIZATION_LOCATIONS,
+        "revenue_range[min]": REVENUE_RANGE_MIN,
+        "page": org_page,
+        "per_page": ORGANIZATIONS_PER_PAGE
+    }
+
+    result = safe_post(ORG_SEARCH_URL, payload)
+    companies_revenue_filtered = result.get("organizations", []) + result.get("accounts", [])
+
+
+    companies += companies_revenue_filtered
+    print(f"✅ Retrieved {len(companies)} companies.")
+
+    new_orgs = [{"id": o.get("organization_id", o.get("id")), "name": o.get("name")} for o in companies]
+    save_cached_organizations(new_orgs)
+
+    # Update org_page
+    next_org_page = org_page + 1 if increase_page else 1
+    return new_orgs, next_org_page
+
+def fetch_people(org_ids, people_page):
+    print(f"👥 Retrieving contacts... (page {people_page}) from {len(org_ids)} orgs...")
+
+    payload = {
+        "person_titles[]": PERSON_TITLES,
+        "person_locations[]": ORGANIZATION_LOCATIONS,
+        "organization_ids[]": org_ids,
+        "page": people_page,
+        "per_page": CONTACTS_PER_PAGE
+    }
+
+    result = safe_post(PEOPLE_SEARCH_URL, payload)
+    return result.get("people", []) + result.get("contacts", [])
 
 timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
 print(f"⏰ Program started running at: {timestamp}!")
