@@ -28,15 +28,23 @@ REVENUE_RANGE_MIN = 50000000
 
 # "People Search" endpoint parameters 
 PERSON_TITLES = ["sales", "marketing", "media", "communication", "advertising", "advertisement", "branding", "brands"]
-PERSON_SENIORITIES = ["owner", "founder", "c_suite", "partner", "vp", "head", "director", "manager", "senior", "entry", "intern"]
 
 # General parameters
-ORGANIZATIONS_PER_PAGE = 5 if TEST_MODE else 100
+ORGANIZATIONS_PER_PAGE = 5 if TEST_MODE else 50     # Despite its request accepting a maximum of 100 organizations, split in half due to querying it twice
 CONTACTS_PER_PAGE = 5 if TEST_MODE else 100
 
 # Constants
 LOCKED_EMAIL = "email_not_unlocked@domain.com"
-WEBHOOK_RESPONSE_TIME = 180
+WEBHOOK_RESPONSE_TIME = 300
+
+# Files
+ORG_CACHE_FILE = "cached_organizations.json"
+STATE_FILE = "pagination_state.json"
+
+# Apollo API Endpoints
+ORG_SEARCH_URL = "https://api.apollo.io/api/v1/mixed_companies/search"
+PEOPLE_SEARCH_URL = "https://api.apollo.io/api/v1/mixed_people/search"
+
 
 
 timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
