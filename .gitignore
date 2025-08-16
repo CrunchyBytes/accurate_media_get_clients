@@ -9,7 +9,7 @@ venv/
 
 # Every Python file except for the development one
 *.py
-!main_3.py
+!main.py
 
 # Every JSON file created
 *.json

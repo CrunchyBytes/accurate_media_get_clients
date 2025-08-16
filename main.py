@@ -285,7 +285,11 @@ if contacts_found:
             enriched_people = response.get("matches", [])
 
             # Map each person ID to their real email
-            enriched_map = {person.get("id"): person.get("email") for person in enriched_people}
+            try:
+                enriched_map = {person.get("id"): person.get("email") for person in enriched_people}
+            except AttributeError as error:
+                breakpoint()
+                continue
             
             # Update the corresponding contact's Email field with the enriched email
             for contact in chunk:
