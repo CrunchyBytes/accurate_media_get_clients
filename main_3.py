@@ -411,37 +411,6 @@ else:
     except PermissionError as permission_error:
         print(f"⚠️ PermissionError when attempting to copy {csv_filename} to {master_csv}: {permission_error}.")
         print(f"⚠️ Please ensure that {master_csv} isn't open")
-else:
-    print("⚠️ No new contacts to save.")
 
 
-# === Step 6: Optional Upload to Upnify CRM ===
-if UPNIFY_API_KEY and UPNIFY_API_TOKEN and contacts_found:
-    print("☁️ Uploading to Upnify CRM...")
-    upnify_url = "https://api.upnify.com/v1/contacts"
-    upnify_headers = {
-        "X-API-KEY": UPNIFY_API_KEY,
-        "X-API-TOKEN": UPNIFY_API_TOKEN,
-        "Content-Type": "application/json"
-    }
-
-    for contact in contacts_found:
-        payload = {
-            "name": f"{contact['First Name']} {contact['Last Name']}",
-            "email": contact["Email"],
-            "phone": contact["Phone"],
-            "company": contact["Organization"],
-            "title": contact["Title"],
-            "location": contact["Location"]
-        }
-        try:
-            response = requests.post(upnify_url, headers=headers, params=payload, json={})
-            response.raise_for_status()
-        except requests.exceptions.RequestException as e:
-            print(f"[Upnify Error] {e}")
-
-    print("✅ Upload complete.")
-else:
-    print("ℹ️ Upnify upload skipped (no credentials or no contacts).")
-
-print("✅ Script finished.")
+    print("✅ Script finished.")
