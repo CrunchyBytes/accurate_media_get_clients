@@ -31,6 +31,10 @@ Please note that at least 4 files will be created when executing the script for 
 4. **pagination_state.json:** A registry of the current Organization and People page to query, in order to ensure that the same information will not be queried indefinitely.
 
 
+### ⚠️ Please make sure to not have **apollo_contacts_master.csv** open when running the script
+Having the file open prevents results from being updated.
+
+
 ## Resources
 ### Apollo
 - [Apollo's Home Page](https://www.apollo.io/)
