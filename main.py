@@ -124,13 +124,21 @@ def fetch_people(org_ids, people_page):
     return result.get("people", []) + result.get("contacts", [])
 
 
+program_iterations: int = 1
+
 try:
-    program_iterations: int = int(sys.argv[1])
+    program_iterations = int(sys.argv[1])
 except ValueError as error:
     print(f'❌ Please specify an integer as the second argument when running the script: {error}')
+    exit()
+except IndexError as error:
+    # If no argument is given when executing the script, run with 1 iteration by default
+    program_iterations = 1
 
 
-for _ in range(0, program_iterations):
+for i in range(0, program_iterations):
+    print(f"🏃 Current iteration: {i+1} of {program_iterations}")
+
     timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
     print(f"⏰ Program started running at: {timestamp}!")
 
