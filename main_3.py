@@ -148,64 +148,51 @@ def safe_post(url, payload={}, json={}):
         print(f"[Error] {e}")
         return {}
 
+# Load current state
+state = load_state()
+people_page = state.get("people_page", 1)
+org_page = state.get("organization_page", 1)
+
+cached_orgs = load_cached_organizations()
+
+# === If no orgs cached, fetch them
+if not cached_orgs:
+    cached_orgs, org_page = refresh_cached_organizations(org_page, False)
+    state["organization_page"] = org_page
+    state["people_page"] = people_page = 1
+    save_state(state)
+
+org_ids = [org["id"] for org in cached_orgs]
+
+# === Step 1: Try current people_page for cached orgs
+people = fetch_people(org_ids, people_page)
+
+# === Step 2: If no people, try next people page
+if len(people) == 0:
+    print("⚠️ No people found. Trying next page...")
+    people_page += 1
+    people = fetch_people(org_ids, people_page)
+
+# === Step 3: Still no people → refresh orgs and try again
+if len(people) == 0:
+    print("⚠️ Still no people after next page. Refreshing organizations...")
+    cached_orgs, org_page = refresh_cached_organizations(org_page, True)
+    save_cached_organizations(cached_orgs)
+    people_page = 1
+    org_ids = [org["id"] for org in cached_orgs]
+    people = fetch_people(org_ids, people_page)
+
+# === Step 4: If this run fetched people, advance the people_page
+if len(people) > 0:
+    print(f"✅ Retrieved {len(people)} people.")
+    state["people_page"] = people_page + 1 if not TEST_MODE else 1
+    state["organization_page"] = org_page
+    save_state(state)
+else:
+    print("❌ No people found after all fallbacks.")
+
 # === Step 1: Get Companies ===
-print("🔎 Retrieving companies...")
-
-companies = []
-companies_revenue_filtered = []
-
-# === Step 1.25: Get Companies with Number of Employees filter === 
-payload = {
-    "organization_num_employees_ranges[]": EMPLOYEE_RANGES,
-    "organization_locations[]": ORGANIZATION_LOCATIONS,
-    "per_page": ORGANIZATIONS_PER_PAGE
-}
-
-result = safe_post("https://api.apollo.io/api/v1/mixed_companies/search", payload)
-
-if result:
-    companies = result.get("organizations", [])
-
-# === Step 1.5: Get Companies with Revenue filter === 
-payload = {
-    "organization_locations[]": ORGANIZATION_LOCATIONS,
-    "revenue_range[min]": REVENUE_RANGE_MIN,
-    "per_page": ORGANIZATIONS_PER_PAGE
-}
-
-result = safe_post("https://api.apollo.io/api/v1/mixed_companies/search", payload)
-
-if result:
-    companies_revenue_filtered = result.get("organizations", [])
-
-companies += companies_revenue_filtered
-
-
-organization_ids = []
-
-for company in companies:
-    organization_id = company.get("id", "")
-
-    if organization_id:
-        organization_ids.append(organization_id)
-
-print(f"✅ Retrieved {len(organization_ids)} companies.")
-
-# === Step 2: Get Contacts per Company ===
-print("👥 Retrieving contacts...")
 contacts_found = []
-
-payload = {
-    "person_titles[]": PERSON_TITLES,
-    "person_locations[]": ORGANIZATION_LOCATIONS,
-    "person_seniorities[]": PERSON_SENIORITIES,
-    "organization_locations[]": ORGANIZATION_LOCATIONS,
-    "organization_ids[]": organization_ids,
-    "per_page": CONTACTS_PER_PAGE
-}
-
-result = safe_post("https://api.apollo.io/api/v1/mixed_people/search", payload)
-people = result.get("people", [])
 
 for person in people:
     email = person.get("email", "").lower()
