@@ -230,7 +230,8 @@ for person in people:
 
     contact_data = {
         "Person ID": id,
-        "Name": name,
+        "First Name": person.get("first_name", ""),
+        "Last Name": person.get("last_name", ""),
         "WhatsApp": "",
         "LinkedIn": person.get("linkedin_url", ""),
         "Organization ID": person.get("organization_id", ""),
