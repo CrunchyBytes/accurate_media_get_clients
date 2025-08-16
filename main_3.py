@@ -245,7 +245,6 @@ for person in people:
     contacts_found.append(contact_data)
     existing_emails.add(email)
 
-print(f"✅ Retrieved {len(contacts_found)} new contacts.")
 
 # === Step 2.5: Enrich e-mails ===
 if contacts_found:
@@ -302,91 +301,96 @@ contacts_found = [
     if contact.get("Email", "").lower() not in existing_emails
 ]
 
-
-# === Step 4: Retrieve personal phone numbers ===
-# Sleep while awaiting webhook response
-print(f"📞 Waiting {WEBHOOK_RESPONSE_TIME} seconds to retrieve phone numbers...")
-sleep(WEBHOOK_RESPONSE_TIME)
-
-# Define request headers
-headers = {
-    "Authorization": f"Bearer {PIPEDREAM_API_KEY}"
-}
-
-# Poll webhook events from Pipedream
-response = requests.get(
-    f"https://api.pipedream.com/v1/sources/{PIPEDREAM_SOURCE_ID}/events",
-    headers=headers
-)
-
-if response.status_code != 200:
-    print("❌ Failed to retrieve events.")
-    print(f"Status code: {response.status_code}")
-    exit()
-
-events = response.json().get("data", [])
-
-id_to_phone = {}
-for event in events:
-    try:
-        payload_body = event.get("e").get("body", {})
-        
-        if payload_body:
-            payload_body_status = payload_body.get("status")
-
-            if payload_body_status == "success":
-                people = payload_body.get("people")
-
-                for person in people:
-                    person_status = person.get("status")
-
-                    if person_status == "success":
-                        person_id = person.get("id")
-                        person_phone_numbers = person.get("phone_numbers", [])
-
-                        raw_number = ""
-                        for person_phone_number in person_phone_numbers:
-                            if raw_number:
-                                raw_number += ", " + person_phone_number.get("raw_number")
-                            else:
-                                raw_number = person_phone_number.get("raw_number")
-
-                        if person_id and raw_number:
-                            id_to_phone[person_id] = raw_number
-            else:
-                print(f"⚠️ Webhook's status was {payload_body_status}; not 'success'")
-        else:
-            print("⚠️ Webhook's body is empty")
-    except KeyError as e:
-        print(f"❌ Failed to retrieve webhook's events: {e}")
-
-if id_to_phone:
-    print(f"✅ Retrieved {len(id_to_phone)} phone numbers.")
+if not contacts_found:
+    print("⚠️ No new contacts to save.")
 else:
-    print(f"⚠️ Could not retrieve phone numbers")
+    print(f"✅ Retrieved {len(contacts_found)} new contacts.")
 
 
-# Fill in contacts' "WhatsApp" field
-for contact in contacts_found:
-    pid = contact.get("Person ID")
-    
-    if pid in id_to_phone:
-        phone_number = id_to_phone[pid]
+    # === Step 4: Retrieve personal phone numbers ===
+    # Sleep while awaiting webhook response
+    print(f"📞 Waiting {WEBHOOK_RESPONSE_TIME} seconds to retrieve phone numbers...")
+    sleep(WEBHOOK_RESPONSE_TIME)
 
-        if "ext" in phone_number:
-            organization_phone = contact["Organization Phone"]
+    # Define request headers
+    headers = {
+        "Authorization": f"Bearer {PIPEDREAM_API_KEY}"
+    }
 
-            if organization_phone:
-                contact["Organization Phone"] += ", " + phone_number
+    # Poll webhook events from Pipedream
+    response = requests.get(
+        f"https://api.pipedream.com/v1/sources/{PIPEDREAM_SOURCE_ID}/events",
+        headers=headers
+    )
+
+    if response.status_code != 200:
+        print("❌ Failed to retrieve events.")
+        print(f"Status code: {response.status_code}")
+        exit()
+
+    events = response.json().get("data", [])
+
+    id_to_phone = {}
+    for event in events:
+        try:
+            payload_body = event.get("e").get("body", {})
+
+            if payload_body:
+                payload_body_status = payload_body.get("status")
+
+                if payload_body_status == "success":
+                    people = payload_body.get("people")
+
+                    for person in people:
+                        person_status = person.get("status")
+
+                        if person_status == "success":
+                            person_id = person.get("id")
+                            person_phone_numbers = person.get("phone_numbers", [])
+
+                            raw_number = ""
+                            for person_phone_number in person_phone_numbers:
+                                if raw_number:
+                                    raw_number += ", " + person_phone_number.get("raw_number")
+                                else:
+                                    raw_number = person_phone_number.get("raw_number")
+
+                            if person_id and raw_number:
+                                id_to_phone[person_id] = raw_number
+                else:
+                    print(f"⚠️ Webhook's status was {payload_body_status}; not 'success'")
             else:
-                contact["Organization Phone"] = phone_number
-        else:
-            contact["WhatsApp"] = phone_number
+                print("⚠️ Webhook's body is empty")
+        except KeyError as e:
+            print(f"❌ Failed to retrieve webhook's events: {e}")
+
+    if id_to_phone:
+        print(f"✅ Retrieved {len(id_to_phone)} phone numbers.")
+    else:
+        print(f"⚠️ Could not retrieve phone numbers")
 
 
-# === Step 4: Save CSV ===
-print(f"💾 Saving results to {csv_filename}...")
-if contacts_found:
+    # Fill in contacts' "WhatsApp" field
+    for contact in contacts_found:
+        pid = contact.get("Person ID")
+
+        if pid in id_to_phone:
+            phone_number = id_to_phone[pid]
+
+            if "ext" in phone_number:
+                organization_phone = contact["Organization Phone"]
+
+                if organization_phone:
+                    contact["Organization Phone"] += ", " + phone_number
+                else:
+                    contact["Organization Phone"] = phone_number
+            else:
+                contact["WhatsApp"] = phone_number
+
+
+    # === Step 4: Save CSV ===
+    print(f"💾 Saving results to {csv_filename}...")
+
     with open(csv_filename, "w", newline="", encoding='utf-8') as f:
         writer = csv.DictWriter(f, fieldnames=contacts_found[0].keys())
         writer.writeheader()
