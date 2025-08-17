@@ -103,7 +103,7 @@ def refresh_cached_organizations(org_page, increase_page):
     save_cached_organizations(new_orgs)
 
     # Update org_page
-    next_org_page = org_page + 1 if increase_page else 1
+    next_org_page = org_page + 1 if increase_page else org_page
     return new_orgs, next_org_page
 
 def fetch_people(org_ids, people_page):
@@ -119,6 +119,7 @@ def fetch_people(org_ids, people_page):
 
     result = safe_post(PEOPLE_SEARCH_URL, payload)
     return result.get("people", []) + result.get("contacts", [])
+
 
 
 program_iterations: int = 1
@@ -141,6 +142,7 @@ for i in range(0, program_iterations):
 
     csv_filename = f"apollo_contacts_{timestamp}.csv"
     master_csv = "apollo_contacts_master.csv"
+
 
     headers = {
         "accept": "application/json",
@@ -175,9 +177,9 @@ for i in range(0, program_iterations):
 
     # === If no orgs cached, fetch them
     if not cached_orgs:
-        cached_orgs, org_page = refresh_cached_organizations(org_page, False)
-        state["organization_page"] = org_page
-        state["people_page"] = people_page = 1
+        cached_orgs, next_org_page = refresh_cached_organizations(org_page, True)
+        state["organization_page"] = next_org_page
+        state["people_page"] = 1  # resetear al iniciar con nuevas organizaciones
         save_state(state)
 
     org_ids = [org["id"] for org in cached_orgs]
@@ -212,6 +214,11 @@ for i in range(0, program_iterations):
 
     # === Step 1: Get Companies ===
     contacts_found = []
+
+    cached_orgs, org_page = refresh_cached_organizations(org_page, True)
+    print(f"📄 Current organization page: {org_page}, retrieved {len(cached_orgs)} orgs")
+    if not cached_orgs:
+        print("⚠️ No organizations found on this page.")
 
     for person in people:
         email = person.get("email")
@@ -250,6 +257,7 @@ for i in range(0, program_iterations):
             
             organization_phone = "" 
 
+            
 
         contact_data = {
             "Person ID": id,
