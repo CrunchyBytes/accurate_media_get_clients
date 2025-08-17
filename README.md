@@ -18,6 +18,7 @@ to install the [Python "requests" library](https://docs.python-requests.org/en/l
 - Send requests to Apollo's API endpoints to query its organizations, contacts, and to enrich said contacts (i.e., unlock their e-mails and request their phone numbers)
 - Send requests to Pipedream's API to retrieve said contacts' phone numbers
 
+`python -m pip install dotenv` to install the Python "dotenv" library, which is used to read the **.env** file's contents, and use its values within the script.
 ## How to run the script
 From the directory in which you've cloned the Github repository, execute the following command from the terminal to execute the script:
 `py main.py <n>`
